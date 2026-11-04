@@ -1,0 +1,57 @@
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches: [main, 'claude/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Cloudflare secrets
+        id: cf
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::warning::CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID non impostati: deploy saltato."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.cf.outputs.ready == 'true'
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        if: steps.cf.outputs.ready == 'true'
+        run: npm install --no-audit --no-fund
+
+      - name: Create Pages project (first run only)
+        if: steps.cf.outputs.ready == 'true'
+        run: npx wrangler pages project create valdombra --production-branch=main || true
+
+      - name: Upload Anthropic API key to Pages (optional)
+        if: steps.cf.outputs.ready == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -n "$ANTHROPIC_API_KEY" ]; then
+            printf '%s' "$ANTHROPIC_API_KEY" | npx wrangler pages secret put ANTHROPIC_API_KEY --project-name valdombra
+          else
+            echo "Nessuna ANTHROPIC_API_KEY: gli NPC useranno i dialoghi scritti."
+          fi
+
+      - name: Deploy
+        if: steps.cf.outputs.ready == 'true'
+        run: npx wrangler pages deploy public --project-name valdombra --branch "${{ github.ref_name }}"
