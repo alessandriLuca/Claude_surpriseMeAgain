@@ -1,7 +1,9 @@
 // Cloudflare Pages Function: /api/npc
 // Gives Valdombra's NPCs a voice when the game is hosted on Cloudflare (outside claude.ai).
-// Needs the ANTHROPIC_API_KEY secret on the Pages project. Optional variables:
-//   NPC_MODEL       model id (default: claude-opus-5-5)
+// Backends: Anthropic (if the ANTHROPIC_API_KEY secret is set), otherwise Cloudflare Workers AI
+// through the `AI` binding declared in wrangler.toml (no key needed, free daily quota). Optional variables:
+//   NPC_MODEL       Anthropic model id (default: claude-opus-5-5)
+//   CF_AI_MODEL     Workers AI model (default: @cf/meta/llama-3.3-70b-instruct-fp8-fast)
 //   NPC_EFFORT      low | medium | high (default: low, keeps replies snappy)
 //   ALLOWED_ORIGINS comma-separated list of origins allowed to call the endpoint (default: same origin only)
 import Anthropic from '@anthropic-ai/sdk';
@@ -36,17 +38,40 @@ function parseReply(text) {
   return v;
 }
 
+const hasBackend = env => !!(env.ANTHROPIC_API_KEY || env.AI);
+
 export async function onRequestGet({ env }) {
-  return json({ ok: !!env.ANTHROPIC_API_KEY });
+  return json({ ok: hasBackend(env), backend: env.ANTHROPIC_API_KEY ? 'anthropic' : env.AI ? 'workers-ai' : null });
+}
+
+function finish(v) {
+  if (!v || typeof v.reply !== 'string') return json({ error: 'bad_model_output' }, 502);
+  return json({ reply: v.reply.slice(0, 600), action: typeof v.action === 'string' ? v.action : 'none', mood: typeof v.mood === 'string' ? v.mood : 'neutral' });
+}
+
+async function askWorkersAI(env, prompt) {
+  try {
+    const out = await env.AI.run(env.CF_AI_MODEL || '@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
+      messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: prompt }],
+      max_tokens: 400,
+    });
+    const r = out && out.response;
+    if (r && typeof r === 'object') return finish(r);
+    return finish(parseReply(String(r || '')));
+  } catch (err) {
+    return json({ error: 'upstream', detail: String(err && err.message || err).slice(0, 200) }, 502);
+  }
 }
 
 export async function onRequestPost({ request, env }) {
-  if (!env.ANTHROPIC_API_KEY) return json({ error: 'not_configured' }, 503);
+  if (!hasBackend(env)) return json({ error: 'not_configured' }, 503);
   if (!originAllowed(request, env)) return json({ error: 'forbidden' }, 403);
   let body;
   try { body = await request.json(); } catch { return json({ error: 'bad_json' }, 400); }
   const prompt = body && typeof body.prompt === 'string' ? body.prompt : '';
   if (!prompt || prompt.length > MAX_PROMPT) return json({ error: 'bad_prompt' }, 400);
+
+  if (!env.ANTHROPIC_API_KEY) return askWorkersAI(env, prompt);
 
   const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY, maxRetries: 1, timeout: 60_000 });
   try {
@@ -61,9 +86,7 @@ export async function onRequestPost({ request, env }) {
     });
     if (response.stop_reason === 'refusal') return json({ reply: '...', action: 'none', mood: 'neutral' });
     const text = response.content.filter(b => b.type === 'text').map(b => b.text).join('');
-    const v = parseReply(text);
-    if (!v || typeof v.reply !== 'string') return json({ error: 'bad_model_output' }, 502);
-    return json({ reply: v.reply.slice(0, 600), action: typeof v.action === 'string' ? v.action : 'none', mood: typeof v.mood === 'string' ? v.mood : 'neutral' });
+    return finish(parseReply(text));
   } catch (err) {
     if (err instanceof Anthropic.RateLimitError) return json({ error: 'rate_limited' }, 429);
     if (err instanceof Anthropic.AuthenticationError || err instanceof Anthropic.PermissionDeniedError) return json({ error: 'not_configured' }, 503);
