@@ -51,7 +51,7 @@ Al villaggio vivono 7 personaggi con una personalità propria. Quando l'AI è di
 L'AI viene cercata in quest'ordine:
 
 1. la capability `sample` di claude.ai, se il gioco è aperto come Artifact;
-2. l'endpoint `/api/npc` del sito, cioè una Cloudflare Pages Function con la tua chiave API Anthropic;
+2. l'endpoint `/api/npc` del sito, cioè una Cloudflare Pages Function. Se c'è la chiave Anthropic usa Claude, altrimenti usa **Cloudflare Workers AI** (nessuna chiave, quota gratuita giornaliera);
 3. se nessuna delle due è disponibile, i dialoghi scritti.
 
 ## Comandi
@@ -80,7 +80,7 @@ Il gioco statico è in `public/`. L'endpoint AI è in `functions/api/npc.js`. Il
 2. Nel repo GitHub, vai su **Settings → Secrets and variables → Actions** e aggiungi:
    - `CLOUDFLARE_API_TOKEN`
    - `CLOUDFLARE_ACCOUNT_ID`
-   - `ANTHROPIC_API_KEY` (facoltativa: senza, gli NPC usano i dialoghi scritti)
+   - `ANTHROPIC_API_KEY` (facoltativa: senza, gli NPC parlano con Cloudflare Workers AI)
 3. Fai un push, oppure lancia il workflow a mano da **Actions**. Il progetto `valdombra` viene creato da solo, e il sito finisce su `https://valdombra.pages.dev`; i branch diversi da `main` ricevono un URL di anteprima.
 
 In alternativa, dalla dashboard di Cloudflare: **Workers & Pages → Create → Pages → Connect to Git**, scegli questo repo, lascia vuoto il comando di build e imposta `public` come cartella di output. Poi aggiungi `ANTHROPIC_API_KEY` come secret nelle impostazioni del progetto.
@@ -89,6 +89,7 @@ Variabili facoltative per l'endpoint AI:
 
 - `NPC_MODEL`: modello da usare. Predefinito `claude-opus-5-5`; per risposte più economiche e veloci puoi mettere, per esempio, `claude-haiku-5-5`.
 - `NPC_EFFORT`: predefinito `low`.
+- `CF_AI_MODEL`: modello Workers AI, predefinito `@cf/meta/llama-3.3-70b-instruct-fp8-fast`.
 - `ALLOWED_ORIGINS`: altri domini autorizzati a chiamare l'endpoint, oltre al sito stesso.
 
 > L'endpoint `/api/npc` è pubblico e usa la tua chiave: chiunque giochi sul sito consuma il tuo credito API. Imposta un limite di spesa nella Console Anthropic, ed eventualmente una regola di rate limiting su Cloudflare.

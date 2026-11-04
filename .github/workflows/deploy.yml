@@ -49,7 +49,7 @@ jobs:
           if [ -n "$ANTHROPIC_API_KEY" ]; then
             printf '%s' "$ANTHROPIC_API_KEY" | npx wrangler pages secret put ANTHROPIC_API_KEY --project-name valdombra
           else
-            echo "Nessuna ANTHROPIC_API_KEY: gli NPC useranno i dialoghi scritti."
+            echo "Nessuna ANTHROPIC_API_KEY: gli NPC useranno Cloudflare Workers AI."
           fi
 
       - name: Deploy
