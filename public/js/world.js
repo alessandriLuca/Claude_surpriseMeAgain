@@ -29,7 +29,7 @@
   }
   W.pathDist = pathDist;
 
-  W.height = function (x, z) {
+  W.baseHeight = function (x, z) {
     let h = U.fbm(x * 0.011 + 3.1, z * 0.011 - 1.7, 4) * 12 + U.fbm(x * 0.06, z * 0.06, 2) * 1.2 + 3;
     const r = Math.hypot(x, z);
     h += U.smooth(165, 215, r) * (34 + U.fbm(x * 0.03, z * 0.03, 3) * 20);
@@ -47,6 +47,51 @@
     if (pd < 5) h -= (1 - pd / 5) * 0.35;
     return h;
   };
+
+  // terrain edits (digging / filling) live in a delta grid at terrain-vertex resolution
+  const GN = SEG + 1, GS = SIZE / SEG;
+  W.delta = new Float32Array(GN * GN);
+  W.height = function (x, z) {
+    const h = W.baseHeight(x, z);
+    const fx = (x + HALF) / GS, fz = (z + HALF) / GS;
+    const ix = Math.floor(fx), iz = Math.floor(fz);
+    if (ix < 0 || iz < 0 || ix >= SEG || iz >= SEG) return h;
+    const tx = fx - ix, tz = fz - iz, i = iz * GN + ix;
+    const d = W.delta;
+    const a = d[i], b = d[i + 1], c = d[i + GN], e = d[i + GN + 1];
+    if (a === 0 && b === 0 && c === 0 && e === 0) return h;
+    return h + (a * (1 - tx) + b * tx) * (1 - tz) + (c * (1 - tx) + e * tx) * tz;
+  };
+  // amount > 0 raises, < 0 digs. Returns the volume actually moved (for resource accounting).
+  W.editTerrain = function (x, z, amount, radius) {
+    if (Math.hypot(x, z) < 14) return 0; // protect the plaza
+    const pos = W.terrain.geometry.attributes.position, col = W.terrain.geometry.attributes.color;
+    let moved = 0;
+    const r = Math.ceil(radius / GS) + 1;
+    const cx = Math.round((x + HALF) / GS), cz = Math.round((z + HALF) / GS);
+    for (let j = cz - r; j <= cz + r; j++) for (let i = cx - r; i <= cx + r; i++) {
+      if (i < 1 || j < 1 || i >= SEG || j >= SEG) continue;
+      const vx = i * GS - HALF, vz = j * GS - HALF;
+      const d = Math.hypot(vx - x, vz - z); if (d > radius) continue;
+      const k = j * GN + i;
+      const f = 1 - d / radius;
+      const old = W.delta[k];
+      W.delta[k] = U.clamp(old + amount * f, -7, 7);
+      moved += Math.abs(W.delta[k] - old);
+      pos.setY(k, W.baseY[k] + W.delta[k]);
+      if (amount < 0) { col.setXYZ(k, U.lerp(col.getX(k), 0.32, f), U.lerp(col.getY(k), 0.24, f), U.lerp(col.getZ(k), 0.17, f)); }
+    }
+    pos.needsUpdate = true; col.needsUpdate = true;
+    W.terrain.geometry.computeVertexNormals();
+    W.terrain.geometry.computeBoundingSphere();
+    return moved;
+  };
+  W.applyDeltas = function (pairs) { // [[k, v], ...]
+    const pos = W.terrain.geometry.attributes.position;
+    for (const [k, v] of pairs) { W.delta[k] = v; pos.setY(k, W.baseY[k] + v); }
+    pos.needsUpdate = true; W.terrain.geometry.computeVertexNormals();
+  };
+  W.deltaPairs = function () { const out = []; for (let k = 0; k < W.delta.length; k++) if (W.delta[k] !== 0) out.push([k, Math.round(W.delta[k] * 100) / 100]); return out; };
 
   W.zoneAt = function (x, z) {
     let best = null, bd = 1e9;
@@ -70,7 +115,7 @@
         const k = key(cx, cz); if (!grid.has(k)) grid.set(k, []); grid.get(k).push(c);
       }
   }
-  W.addCircle = (x, z, r) => addCol({ type: 'circle', x, z, r });
+  W.addCircle = (x, z, r) => { const c = { type: 'circle', x, z, r }; addCol(c); return c; };
   W.addBox = (x, z, hw, hd, rot) => addCol({ type: 'box', x, z, hw, hd, rot: rot || 0, c: Math.cos(rot || 0), s: Math.sin(rot || 0) });
 
   // push a circle (x,z,r) out of static colliders; returns {x,z}
@@ -80,7 +125,7 @@
     for (let ix = cx - 1; ix <= cx + 1; ix++) for (let iz = cz - 1; iz <= cz + 1; iz++) {
       const list = grid.get(key(ix, iz)); if (!list) continue;
       for (const c of list) {
-        if (seen.has(c)) continue; seen.add(c);
+        if (c.dead || seen.has(c)) continue; seen.add(c);
         if (c.type === 'circle') {
           const dx = x - c.x, dz = z - c.z, d = Math.hypot(dx, dz), m = r + c.r;
           if (d < m && d > 1e-4) { x = c.x + dx / d * m; z = c.z + dz / d * m; }
@@ -176,13 +221,14 @@
     geo.rotateX(-Math.PI / 2);
     const pos = geo.attributes.position;
     const col = new Float32Array(pos.count * 3);
+    W.baseY = new Float32Array(pos.count);
     const c = new THREE.Color();
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i), z = pos.getZ(i);
-      const h = W.height(x, z);
-      pos.setY(i, h);
+      const h = W.baseHeight(x, z);
+      pos.setY(i, h); W.baseY[i] = h;
       const e = 1.2;
-      const slope = Math.hypot(W.height(x + e, z) - W.height(x - e, z), W.height(x, z + e) - W.height(x, z - e)) / (2 * e);
+      const slope = Math.hypot(W.baseHeight(x + e, z) - W.baseHeight(x - e, z), W.baseHeight(x, z + e) - W.baseHeight(x, z - e)) / (2 * e);
       const n = U.fbm(x * 0.08, z * 0.08, 2);
       const forest = 1 - U.smooth(40, 80, Math.hypot(x - W.places.forest.x, z - W.places.forest.z));
       c.setRGB(0.15 + n * 0.05, 0.27 + n * 0.08 - forest * 0.06, 0.15 + forest * 0.03);
@@ -248,12 +294,13 @@
       if (r() < dens) {
         const s = 0.8 + r() * 0.8;
         (r() < 0.65 ? pines : oaks).push({ x, z, y: h, s, rot: r() * 6.28 });
-      } else if (r() < 0.012 && rr < 200) rocks.push({ x, z, y: h, s: 0.6 + r() * 1.8, rot: r() * 6.28 });
+      } else if (r() < 0.03 && rr < 200 && rr > 44) rocks.push({ x, z, y: h, s: 0.7 + r() * 1.5, rot: r() * 6.28, ore: r() < (U.smooth(60, 170, rr) * 0.35 + (Math.hypot(x - 120, z - 35) < 50 ? 0.3 : 0)) });
       else if (r() < 0.03 && rr > 46) bushes.push({ x, z, y: h, s: 0.5 + r() * 0.6, rot: r() * 6.28 });
     }
     const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), p = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
     function inst(geo, mat, list, f, shadow) {
       const mesh = new THREE.InstancedMesh(geo, mat, list.length);
+      list.forEach((t, i) => { t.meshes = t.meshes || []; t.meshes.push({ mesh, i }); });
       list.forEach((t, i) => {
         const o = f(t);
         q.setFromAxisAngle(up, t.rot); sc.set(o.sx, o.sy, o.sz); p.set(t.x, t.y + o.dy, t.z);
@@ -272,11 +319,26 @@
     inst(new THREE.ConeGeometry(1.6, 3.4, 7), pineMat, pines, t => ({ sx: t.s, sy: t.s, sz: t.s, dy: 6.4 * t.s, color: tc.setHSL(0.35 + r() * 0.06, 0.45, 0.15 + r() * 0.06).clone() }), true);
     inst(new THREE.CylinderGeometry(0.35, 0.55, 3.4, 6), trunkMat, oaks, t => ({ sx: t.s, sy: t.s, sz: t.s, dy: 1.7 * t.s }), true);
     inst(new THREE.IcosahedronGeometry(2.6, 0), pineMat, oaks, t => ({ sx: t.s * 1.1, sy: t.s * 0.9, sz: t.s * 1.1, dy: 4.6 * t.s, color: tc.setHSL(0.24 + r() * 0.08, 0.4, 0.14 + r() * 0.06).clone() }), true);
-    inst(new THREE.DodecahedronGeometry(1, 0), new THREE.MeshLambertMaterial({ color: 0x5a5a60 }), rocks, t => ({ sx: t.s * 1.3, sy: t.s * 0.8, sz: t.s, dy: t.s * 0.25 }), true);
+    inst(new THREE.DodecahedronGeometry(1, 0), new THREE.MeshLambertMaterial({ color: 0xffffff }), rocks, t => ({ sx: t.s * 1.3, sy: t.s * 0.8, sz: t.s, dy: t.s * 0.25, color: new THREE.Color(t.ore ? 0x9a5a34 : 0x5a5a60) }), true);
     inst(new THREE.IcosahedronGeometry(1, 0), pineMat, bushes, t => ({ sx: t.s * 1.4, sy: t.s, sz: t.s * 1.4, dy: t.s * 0.4, color: tc.setHSL(0.3, 0.4, 0.12 + r() * 0.05).clone() }), false);
-    pines.forEach(t => W.addCircle(t.x, t.z, 0.5 * t.s));
-    oaks.forEach(t => W.addCircle(t.x, t.z, 0.6 * t.s));
-    rocks.forEach(t => { if (t.s > 1) W.addCircle(t.x, t.z, t.s * 1.1); });
+    pines.forEach(t => { t.col = W.addCircle(t.x, t.z, 0.5 * t.s); t.kind = 'tree'; t.hp = 3; });
+    oaks.forEach(t => { t.col = W.addCircle(t.x, t.z, 0.6 * t.s); t.kind = 'tree'; t.hp = 4; });
+    rocks.forEach(t => { t.col = W.addCircle(t.x, t.z, t.s * 1.05); t.kind = t.ore ? 'ore' : 'rock'; t.hp = t.ore ? 5 : 4; });
+    W.nodes = pines.concat(oaks, rocks);
+    W.nodes.forEach((n, i) => { n.id = i; n.alive = true; });
+    // node spatial hash for quick lookups
+    W.nodeGrid = new Map();
+    for (const n of W.nodes) { const k = key(Math.floor(n.x / CELL), Math.floor(n.z / CELL)); if (!W.nodeGrid.has(k)) W.nodeGrid.set(k, []); W.nodeGrid.get(k).push(n); }
+    // crystal veins (glowing, near the lake lair and the ruins)
+    const crystalM = new THREE.MeshLambertMaterial({ color: 0x8ae8ff, emissive: 0x2a8ab0 });
+    [[-150, 92], [-170, 128], [-135, 135], [146, 22], [140, 55], [-120, -140], [96, -150], [-60, 150]].forEach(([x, z]) => {
+      const g = new THREE.Group(); const y = W.baseHeight(x, z);
+      for (let k = 0; k < 5; k++) { const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.35 + r() * 0.3, 0), crystalM); m.position.set((r() - 0.5) * 1.2, 0.4 + r() * 0.5, (r() - 0.5) * 1.2); m.scale.y = 1.8 + r(); m.rotation.set(r() * 0.5, r() * 3, r() * 0.5); m.castShadow = true; g.add(m); }
+      g.position.set(x, y, z); scene.add(g);
+      const n = { x, z, y, s: 1, kind: 'crystal', hp: 4, group: g, col: W.addCircle(x, z, 0.9), id: W.nodes.length, alive: true };
+      W.nodes.push(n);
+      const k = key(Math.floor(x / CELL), Math.floor(z / CELL)); if (!W.nodeGrid.has(k)) W.nodeGrid.set(k, []); W.nodeGrid.get(k).push(n);
+    });
     W.treeCount = pines.length + oaks.length;
   }
 
@@ -591,6 +653,55 @@
     W.fireflies = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xd8ff70, size: 0.35, transparent: true, opacity: 0.9, depthWrite: false }));
     scene.add(W.fireflies);
   }
+
+
+  // ------------------------------------------------------------ resource nodes
+  W.nodesNear = function (x, z, rad) {
+    const out = [];
+    for (let cx = Math.floor((x - rad) / CELL); cx <= Math.floor((x + rad) / CELL); cx++)
+      for (let cz = Math.floor((z - rad) / CELL); cz <= Math.floor((z + rad) / CELL); cz++) {
+        const l = W.nodeGrid.get(key(cx, cz)); if (!l) continue;
+        for (const n of l) if (n.alive && Math.hypot(n.x - x, n.z - z) < rad + n.s) out.push(n);
+      }
+    return out;
+  };
+  const zeroM = new THREE.Matrix4().makeScale(0, 0, 0);
+  W.removeNode = function (n) {
+    n.alive = false;
+    if (n.col) n.col.dead = true;
+    if (n.meshes) for (const { mesh, i } of n.meshes) { mesh.setMatrixAt(i, zeroM); mesh.instanceMatrix.needsUpdate = true; }
+    if (n.group) n.group.visible = false;
+  };
+  W.shakeNode = function (n, t) {
+    if (n.group) { n.group.rotation.z = Math.sin(t * 60) * 0.05; return; }
+  };
+
+  // collect static meshes the grappling hook can latch onto
+  W.collectSolids = function (scene) {
+    W.solids = [];
+    scene.traverse(o => {
+      if (!o.isMesh || o === W.sky || o === W.water || o === W.terrain) return;
+      if (o.material && (o.material.transparent || o.material.isPointsMaterial)) return;
+      W.solids.push(o);
+    });
+  };
+
+  // march a ray against the heightfield; returns distance or -1
+  W.rayTerrain = function (o, d, maxD) {
+    let prev = 0, step = 0.4;
+    for (let t = 0.5; t <= maxD; t += step) {
+      const x = o.x + d.x * t, y = o.y + d.y * t, z = o.z + d.z * t;
+      if (y < W.height(x, z)) {
+        // refine
+        let a = prev, b = t;
+        for (let k = 0; k < 6; k++) { const m = (a + b) / 2; if (o.y + d.y * m < W.height(o.x + d.x * m, o.z + d.z * m)) b = m; else a = m; }
+        return (a + b) / 2;
+      }
+      prev = t;
+      if (t > 12) step = 0.7;
+    }
+    return -1;
+  };
 
   W.update = function (dt, t) {
     for (const a of W.animated) {

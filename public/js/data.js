@@ -8,7 +8,7 @@
     'Al centro della piazza c\'è la Lanterna Antica, spenta. La leggenda dice che solo tre Braci Primordiali possono riaccenderla, e che la sua fiamma va portata al Faro sul colle a nord-est per richiamare l\'alba.',
     'Le tre Braci sono custodite da guardiani corrotti: Zannagrigia, il lupo alfa del Bosco Sussurrante (nord-ovest); il Cavaliere Senza Nome, nelle Rovine di Aurelia (est); il Golem del Lago, nella sua tana sulla riva ovest del Lago delle Nebbie (sud-ovest).',
     'Nel bosco crescono le Erbe Lunari, che brillano di luce azzurra. Gli scheletri delle rovine portano frammenti di Ferro Antico. I lupi infestano i sentieri.',
-    'Il protagonista è un viandante con spada e lanterna, arrivato a Valdombra da poco. Gli abitanti lo chiamano "forestiero".',
+    'Il protagonista è un viandante con spada, scudo, lanterna e un rampino da polso, arrivato a Valdombra da poco. Gli abitanti lo chiamano "forestiero". Sa parare i colpi al momento giusto, tagliare alberi, spaccare rocce e minerali, scavare la terra e costruire capanni, muri, rampe, torce e fuochi da campo.',
   ].join(' ');
 
   // ------------------------------------------------------------ items
@@ -145,7 +145,8 @@
       topics: [
         { id: 'who', label: 'Chi sei?', reply: 'Bruno. Fabbro.' },
         { id: 'iron_accept', label: 'Puoi migliorare la mia spada?', cond: g => qs(g, 'iron') === 'none', action: 'iron_accept', reply: 'Con questo ferro? No. Serve Ferro Antico. Tre pezzi. Gli scheletri delle Rovine ne sono pieni. Rompili. Portamelo.' },
-        { id: 'iron_complete', label: 'Ecco il Ferro Antico.', cond: g => qs(g, 'iron') === 'active' && has(g, 'iron', 3), action: 'iron_complete', reply: 'Mh. Buono. ...Ecco. Ora taglia anche le ombre. Non ringraziarmi. Usala.' },
+        { id: 'iron_complete', label: 'Ecco il Ferro Antico.', cond: g => qs(g, 'iron') === 'active' && has(g, 'iron', 3), action: 'iron_complete', reply: 'Mh. Buono. ...Ecco. Una spada lunga, fatta come si deve. Taglia anche le ombre. Non ringraziarmi. Usala.' },
+        { id: 'forge_upgrade', label: 'Rinforza la mia arma (3 minerale di ferro, 40 oro)', cond: g => (g.S.res.iron || 0) >= 3 && g.S.gold >= 40, action: 'forge_upgrade', reply: ['*clang* *clang* ...Fatto. Più pesante. Più cattiva.', 'Mh. Il minerale è buono. La lama adesso morde.'] },
         { id: 'family', label: 'Hai famiglia?', reply: 'Una figlia. Mira. Troppo curiosa. Come sua madre. ...Se la vedi nel bosco, riportala a casa.' },
         { id: 'night', label: 'Che ne pensi della Notte Lunga?', reply: 'Il fuoco della forgia non si spegne. Il resto non mi interessa.' },
       ],
@@ -181,7 +182,7 @@
         { id: 'wolves_accept', label: 'Hai bisogno di una mano?', cond: g => qs(g, 'wolves') === 'none', action: 'wolves_accept', reply: 'Ci sono lupi d\'ombra su tutti i sentieri. Abbattine sei e ti pago sessanta monete. Non è eroico, ma è onesto.' },
         { id: 'wolves_complete', label: 'Ho abbattuto i lupi.', cond: g => qs(g, 'wolves') === 'active' && (g.S.quests.wolves.progress || 0) >= 6, action: 'wolves_complete', reply: 'Sei. Li ho contati dalle mura. Ecco le tue sessanta monete e... prendi anche questo spallaccio. Non te lo regalo: te lo presto per sempre.' },
         { id: 'legend', label: 'Credi alla leggenda delle Braci?', reply: 'Credo alle cose che posso infilzare. Ma il sole non sorge da quaranta giorni, quindi... va bene, sono aperta a nuove idee.' },
-        { id: 'tips', label: 'Consigli per combattere?', reply: 'I lupi caricano: aspetta che si lancino, poi rotola di lato (Ctrl o C) e colpisci. Gli scheletri sono lenti ma picchiano duro. I fuochi fatui? Corri verso di loro, non scappare.' },
+        { id: 'tips', label: 'Consigli per combattere?', reply: 'Quando un nemico carica il colpo vedi un lampo. Giallo: alza lo scudo (tasto destro) proprio mentre colpisce e lo stordisci. Rosso: quello non si para, rotola via (Ctrl o C). E i fuochi fatui? Para le loro sfere al momento giusto e gliele rimandi indietro.' },
       ],
     },
     {

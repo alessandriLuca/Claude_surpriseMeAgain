@@ -1,20 +1,42 @@
 // Valdombra — AI voice for NPCs.
-// Uses the claude.ai artifact `sample` capability when available; otherwise the game falls back to scripted dialogue.
+// Backends, in order: the claude.ai artifact `sample` capability; the site's own /api/npc endpoint
+// (Cloudflare Pages Function holding an Anthropic API key); otherwise scripted dialogue.
 (function () {
-  const AI = { status: 'checking', sample: null, disabledByUser: false, listeners: [] };
+  const AI = { status: 'checking', sample: null, backend: null, disabledByUser: false, listeners: [] };
 
   function setStatus(s) { AI.status = s; AI.listeners.forEach(f => f(s)); }
   AI.onStatus = f => { AI.listeners.push(f); f(AI.status); };
   AI.available = () => AI.status === 'ready' && !AI.disabledByUser;
 
-  AI.init = async function () {
-    if (!window.claude || typeof window.claude.use !== 'function') { setStatus('offline'); return; }
+  async function tryServer() {
+    if (location.protocol !== 'http:' && location.protocol !== 'https:') return false;
     try {
-      const s = await window.claude.use('sample');
-      if (!s) { setStatus('offline'); return; }
-      AI.sample = s; setStatus('ready');
-    } catch (e) { setStatus('offline'); }
+      const r = await fetch('api/npc', { method: 'GET', headers: { accept: 'application/json' } });
+      if (!r.ok) return false;
+      const j = await r.json();
+      return !!(j && j.ok);
+    } catch (e) { return false; }
+  }
+  AI.init = async function () {
+    if (window.claude && typeof window.claude.use === 'function') {
+      try {
+        const s = await window.claude.use('sample');
+        if (s) { AI.sample = s; AI.backend = 'artifact'; setStatus('ready'); return; }
+      } catch (e) { /* fall through */ }
+    }
+    if (await tryServer()) { AI.backend = 'server'; setStatus('ready'); return; }
+    setStatus('offline');
   };
+
+  async function askServer(prompt, signal) {
+    let r;
+    try { r = await fetch('api/npc', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ prompt }), signal }); }
+    catch (e) { throw { code: e && e.name === 'AbortError' ? 'cancelled' : 'upstream_error' }; }
+    if (r.status === 429) throw { code: 'rate_limited' };
+    if (r.status === 503) throw { code: 'sampling_disabled' };
+    if (!r.ok) throw { code: 'upstream_error' };
+    return r.json();
+  }
 
   function moodList() { return 'neutral, happy, amused, sad, angry, afraid, grateful'; }
 
@@ -52,7 +74,7 @@
       `Rispondi SOLO con un oggetto JSON: {"reply": "testo della risposta", "action": "id azione oppure none", "mood": "uno tra ${moodList()}"}`,
     ].filter(x => x !== '').join('\n');
 
-    const res = await AI.sample.json(prompt, { modelTier: 'quick', cache: false, signal });
+    const res = AI.backend === 'server' ? await askServer(prompt, signal) : await AI.sample.json(prompt, { modelTier: 'quick', cache: false, signal });
     const reply = res && typeof res.reply === 'string' ? res.reply.trim() : '';
     if (!reply) throw { code: 'empty_completion' };
     let action = res.action && res.action !== 'none' ? String(res.action) : null;

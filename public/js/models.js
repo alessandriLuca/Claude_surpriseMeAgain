@@ -66,12 +66,11 @@
   // Hero
   M.hero = function () {
     const rig = M.humanoid({ skin: 0xe0b090, cloth: 0x2a4a5a, cloth2: 0x2a2420, hair: 0x6a3a1a, cape: 0x7a1a24 });
-    // sword
-    const sword = new THREE.Group(); rig.handR.add(sword); sword.rotation.x = Math.PI / 2;
-    mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.22, 6), lam(0x3a2418), 0, -0.02, 0, sword);
-    mesh(new THREE.BoxGeometry(0.34, 0.05, 0.07), lam(0xa08040), 0, 0.1, 0, sword);
-    rig.blade = mesh(new THREE.BoxGeometry(0.07, 1.0, 0.025), lam(0xd0d8e0, { emissive: 0x101820 }), 0, 0.62, 0, sword);
-    rig.sword = sword;
+    // equipment mounts (filled by the game from Loot meshes)
+    rig.weaponMount = new THREE.Group(); rig.handR.add(rig.weaponMount); rig.weaponMount.rotation.x = Math.PI / 2;
+    rig.shieldMount = new THREE.Group(); rig.armL.add(rig.shieldMount); rig.shieldMount.position.set(0, -0.45, 0.15);
+    // grappling hook launcher on the left wrist
+    mesh(new THREE.BoxGeometry(0.12, 0.2, 0.12), lam(0x4a4038), -0.02, -0.55, -0.06, rig.armL);
     // shoulder pads
     mesh(new THREE.SphereGeometry(0.14, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2), lam(0x5a5a64), -0.36, 1.6, 0, rig.body);
     mesh(new THREE.SphereGeometry(0.14, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2), lam(0x5a5a64), 0.36, 1.6, 0, rig.body);

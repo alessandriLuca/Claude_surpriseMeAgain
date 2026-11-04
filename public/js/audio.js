@@ -66,6 +66,15 @@
     open() { tone(330, 'triangle', 0.15, 0.1); setTimeout(() => tone(440, 'triangle', 0.2, 0.1), 80); },
     roar() { noise(1.2, 0.5, 'lowpass', 500, 2, null, 120); tone(60, 'sawtooth', 1.1, 0.3, null, 40); },
     potion() { for (let i = 0; i < 5; i++) setTimeout(() => tone(400 + i * 120, 'sine', 0.15, 0.1), i * 50); },
+    clang() { tone(1250, 'square', 0.12, 0.09); tone(1870, 'triangle', 0.25, 0.08); noise(0.08, 0.3, 'highpass', 3000); },
+    parry() { tone(1600, 'triangle', 0.5, 0.2); tone(2400, 'sine', 0.7, 0.12); tone(800, 'square', 0.12, 0.1); noise(0.1, 0.35, 'highpass', 4000); },
+    warn(red) { tone(red ? 520 : 980, 'triangle', 0.18, 0.1, null, red ? 300 : 1400); },
+    chop() { noise(0.09, 0.4, 'bandpass', 900, 3); tone(180, 'triangle', 0.08, 0.15); },
+    mine() { tone(2100, 'square', 0.06, 0.07); noise(0.07, 0.35, 'highpass', 2500); },
+    dig() { noise(0.18, 0.35, 'lowpass', 500); },
+    build() { tone(220, 'triangle', 0.12, 0.15); setTimeout(() => tone(330, 'triangle', 0.12, 0.12), 70); noise(0.06, 0.2, 'bandpass', 1200, 2); },
+    loot() { [784, 988, 1175, 1568].forEach((f, i) => setTimeout(() => tone(f, 'triangle', 0.35, 0.14), i * 70)); },
+    grapple() { noise(0.25, 0.3, 'bandpass', 2400, 4, null, 600); tone(900, 'sawtooth', 0.15, 0.05, null, 300); },
     deny() { tone(180, 'square', 0.15, 0.1); },
   };
 

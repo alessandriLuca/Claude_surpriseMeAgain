@@ -58,7 +58,7 @@ kbd { font: 600 0.72em var(--f-ui); letter-spacing: .04em; border: 1px solid var
 .medal { width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 40% 35%, #3a2e3a, #120e18); border: 2px solid var(--ember); box-shadow: 0 0 18px rgba(233,162,74,.25); }
 .medal b { font: 400 1.7rem var(--f-display); line-height: 1; }
 .medal small { display: block; font: 700 .55rem var(--f-ui); letter-spacing: .14em; color: var(--vellum-dim); text-align: center; margin-top: -2px; }
-.bars { display: grid; gap: 6px; width: min(300px, 40vw); }
+.bars { display: grid; gap: 6px; width: min(260px, 30vw); }
 .bar { position: relative; height: 16px; background: rgba(8,8,14,.72); border: 1px solid var(--line); border-radius: 1px; overflow: hidden; }
 .bar i { position: absolute; inset: 0 auto 0 0; width: 100%; transition: width .2s; }
 .bar span { position: absolute; inset: 0; display: grid; place-items: center; font: 700 .7rem var(--f-ui); letter-spacing: .06em; text-shadow: 0 1px 2px #000; font-variant-numeric: tabular-nums; }
@@ -167,6 +167,59 @@ kbd { font: 600 0.72em var(--f-ui); letter-spacing: .04em; border: 1px solid var
 #ending p { font: italic 1.15rem var(--f-body); max-width: 520px; margin: 1rem auto; text-wrap: balance; }
 #end-stats { font: 700 .85rem var(--f-ui) !important; font-style: normal !important; letter-spacing: .08em; color: var(--ember); }
 
+
+#st { height: 6px; } #st i { background: linear-gradient(#e8d070, #a88a30); }
+#resbar { right: max(18px, env(safe-area-inset-right, 0px)); bottom: calc(62px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 6px; font: 700 .8rem var(--f-ui); }
+#resbar div { display: flex; gap: 5px; align-items: center; background: rgba(8,8,14,.55); border: 1px solid var(--line); padding: 3px 8px; font-variant-numeric: tabular-nums; }
+#resbar .ic { color: var(--vellum-dim); }
+#skillbar { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 8px; }
+.sk { --cd: 0; position: relative; width: 64px; padding: 6px 4px 5px; text-align: center; background: rgba(8,8,14,.7); border: 1px solid rgba(233,162,74,.4); overflow: hidden; }
+.sk::after { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,.65); transform-origin: bottom; transform: scaleY(var(--cd)); }
+.sk span { display: block; font: 700 .62rem var(--f-ui); letter-spacing: .08em; margin-top: 3px; color: var(--vellum-dim); }
+.sk.off { opacity: .35; }
+#hotbar { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 5px; width: min(560px, 92vw); }
+#hotbar .slot { flex: 1 1 0; min-width: 0; padding: 5px 4px; background: rgba(8,8,14,.75); border: 1px solid var(--line); text-align: center; }
+#hotbar .slot b { display: block; font: 600 .78rem var(--f-body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#hotbar .slot small { display: block; font: 700 .56rem var(--f-ui); letter-spacing: .03em; color: var(--vellum-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#hotbar .slot.sel { border-color: var(--ember); background: rgba(80,50,20,.75); box-shadow: 0 0 14px rgba(233,162,74,.35); }
+#hotbar .slot.poor small { color: var(--blood); }
+#buildinfo { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); font: 600 .9rem var(--f-body); text-shadow: 0 1px 4px #000; }
+#hotbar[hidden] + #buildinfo { display: none; }
+#sp-badge { position: absolute; left: max(18px, env(safe-area-inset-left, 0px)); bottom: calc(118px + env(safe-area-inset-bottom, 0px)); }
+#crosshair { width: 6px; height: 6px; margin: -3px; background: none; border: 1px solid rgba(233,221,194,.75); }
+#parryflash { position: fixed; inset: 0; pointer-events: none; z-index: 4; opacity: 0; background: radial-gradient(circle, rgba(255,240,170,.35), rgba(255,220,120,0) 60%); }
+#parryflash.on { animation: pf .45s ease-out; }
+@keyframes pf { 0% { opacity: 1; } 100% { opacity: 0; } }
+.float.big { font-size: 1.4rem; font-family: var(--f-display); letter-spacing: .02em; }
+.nlabel.loot b { color: var(--rc); font-size: .92rem; }
+.nlabel.loot span { color: var(--rc); opacity: .8; }
+.panel.wide { width: min(820px, calc(100% - 32px)); }
+.sec { font: 700 .72rem var(--f-ui); letter-spacing: .16em; color: var(--ember); margin: 16px 0 8px; }
+.gears { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.gear { border: 1px solid var(--line); border-top: 2px solid var(--rc); padding: 10px 12px; background: rgba(255,255,255,.02); display: grid; gap: 6px; align-content: start; }
+.gear.eq { background: rgba(233,162,74,.06); }
+.gtop b { display: block; color: var(--rc); font-weight: 600; }
+.gtop small { font: 700 .66rem var(--f-ui); letter-spacing: .08em; color: var(--vellum-dim); }
+.gear ul { margin: 0; padding-left: 16px; font-size: .9rem; }
+.gbtns { display: flex; gap: 6px; flex-wrap: wrap; }
+.gbtns button, .skill button { cursor: pointer; background: rgba(255,255,255,.04); border: 1px solid var(--line); padding: 4px 10px; font: 700 .7rem var(--f-ui); letter-spacing: .06em; }
+.gbtns button:hover, .skill button:not(:disabled):hover { border-color: var(--ember); }
+.kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 4px 20px; }
+.kv div { display: flex; justify-content: space-between; border-bottom: 1px dotted var(--line); font-variant-numeric: tabular-nums; }
+.kv span { color: var(--vellum-dim); }
+.sp { color: var(--vellum-dim); margin: 0 0 12px; } .sp b { color: var(--ember); }
+#skills-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.skill { border: 1px solid var(--line); padding: 10px 12px; display: grid; gap: 6px; align-content: start; }
+.skill b { font: 400 1.1rem var(--f-display); }
+.skill p { margin: 0; font-size: .9rem; color: var(--vellum-dim); }
+.skill small { font: 700 .66rem var(--f-ui); letter-spacing: .1em; color: var(--moon); }
+.skill.owned { border-color: rgba(143,169,222,.5); background: rgba(143,169,222,.06); }
+.skill.locked { opacity: .55; }
+.skill button:disabled { opacity: .45; cursor: default; }
+.tip { margin: 1rem auto 0; max-width: 520px; font: .92rem var(--f-body); color: var(--vellum-dim); text-wrap: balance; }
+.tip .y { color: #ffd860; } .tip .r { color: #ff6050; }
+.controls div { gap: 6px; } .controls kbd + kbd { margin-left: 2px; }
+@media (max-width: 900px) { #resbar { display: none; } }
 @media (max-width: 640px) {
   #track { display: none; }
   #minimap { width: 120px; height: 120px; }
@@ -180,6 +233,7 @@ kbd { font: 600 0.72em var(--f-ui); letter-spacing: .04em; border: 1px solid var
 <canvas id="view"></canvas>
 <div id="vignette"></div>
 <div id="lowhp"></div>
+<div id="parryflash"></div>
 <div id="labels" hidden></div>
 
 <section id="menu">
@@ -192,13 +246,15 @@ kbd { font: 600 0.72em var(--f-ui); letter-spacing: .04em; border: 1px solid var
     </div>
     <p class="menu-ai" id="menu-ai">Controllo se l'AI è disponibile…</p>
     <div class="controls">
-      <div>Muoviti <kbd>W A S D</kbd></div><div>Corri <kbd>Shift</kbd></div>
-      <div>Guarda <kbd>Mouse</kbd></div><div>Attacca (combo) <kbd>Clic</kbd></div>
-      <div>Palla di fuoco <kbd>Q</kbd></div><div>Schiva <kbd>Ctrl</kbd> / <kbd>C</kbd></div>
-      <div>Salta <kbd>Spazio</kbd></div><div>Parla / usa <kbd>E</kbd></div>
-      <div>Pozione <kbd>1</kbd></div><div>Diario <kbd>J</kbd></div>
-      <div>Borsa <kbd>I</kbd></div><div>Mappa <kbd>M</kbd></div>
+      <div>Muoviti / corri <kbd>WASD</kbd> <kbd>Shift</kbd></div><div>Salto / doppio / planata <kbd>Spazio</kbd></div>
+      <div>Attacco (combo) <kbd>Clic</kbd></div><div>Para / blocca <kbd>Tasto destro</kbd></div>
+      <div>Colpo di scudo <kbd>F</kbd></div><div>Schiva <kbd>Ctrl</kbd> <kbd>C</kbd></div>
+      <div>Rampino <kbd>G</kbd> <kbd>Rotella</kbd></div><div>Palla di fuoco <kbd>Q</kbd></div>
+      <div>Vortice (abilità) <kbd>R</kbd></div><div>Parla / usa <kbd>E</kbd></div>
+      <div>Costruisci <kbd>B</kbd></div><div>Pozione <kbd>1</kbd></div>
+      <div>Borsa / abilità <kbd>I</kbd> <kbd>K</kbd></div><div>Diario / mappa <kbd>J</kbd> <kbd>M</kbd></div>
     </div>
+    <p class="tip">Quando un nemico carica il colpo vedi un lampo: <b class="y">giallo</b> si para col tasto destro proprio all'impatto e lo stordisce, <b class="r">rosso</b> non si para, va schivato. Colpisci alberi e rocce per raccogliere legno, pietra e minerali.</p>
     <p class="note">Serve tastiera e mouse. Il salvataggio è automatico in questo browser.</p>
   </div>
 </section>
@@ -215,10 +271,27 @@ kbd { font: 600 0.72em var(--f-ui); letter-spacing: .04em; border: 1px solid var
     <div class="medal"><div><b id="lvl">1</b><small>LIV</small></div></div>
     <div class="bars">
       <div class="bar" id="hp"><i id="hp-fill"></i><span id="hp-txt"></span></div>
+      <div class="bar" id="st"><i id="st-fill"></i></div>
       <div class="bar" id="mp"><i id="mp-fill"></i><span id="mp-txt"></span></div>
       <div class="bar" id="xp"><i id="xp-fill"></i></div>
     </div>
   </div>
+  <div class="corner" id="resbar">
+    <div title="Legno"><span class="ic">▮</span><span id="r-wood">0</span></div>
+    <div title="Pietra"><span class="ic">◆</span><span id="r-stone">0</span></div>
+    <div title="Minerale di ferro"><span class="ic">⛏</span><span id="r-iron">0</span></div>
+    <div title="Cristallo"><span class="ic">✧</span><span id="r-crystal">0</span></div>
+    <div title="Terra"><span class="ic">▪</span><span id="r-dirt">0</span></div>
+  </div>
+  <div id="skillbar">
+    <div class="sk" id="sk-fire"><kbd>Q</kbd><span>Fuoco</span></div>
+    <div class="sk" id="sk-bash"><kbd>F</kbd><span>Scudo</span></div>
+    <div class="sk" id="sk-grapple"><kbd>G</kbd><span>Rampino</span></div>
+    <div class="sk" id="sk-whirl" hidden><kbd>R</kbd><span>Vortice</span></div>
+  </div>
+  <div id="hotbar" hidden></div>
+  <div id="buildinfo"></div>
+  <span id="sp-badge" class="badge on" hidden></span>
   <div class="corner" id="purse">
     <div title="Oro"><span class="ic">◉</span><span id="gold">0</span></div>
     <div title="Pozioni (tasto 1)"><span class="ic">⚗</span><span id="potions">0</span><kbd>1</kbd></div>
@@ -235,7 +308,13 @@ kbd { font: 600 0.72em var(--f-ui); letter-spacing: .04em; border: 1px solid var
 </section>
 
 <section class="panel" id="panel-journal" hidden><h2>Diario <button type="button" data-close>J · CHIUDI</button></h2><div id="journal-list"></div></section>
-<section class="panel" id="panel-inventory" hidden><h2>Borsa <button type="button" data-close>I · CHIUDI</button></h2><div id="inv-stats"></div><div id="inv-list"></div></section>
+<section class="panel wide" id="panel-inventory" hidden><h2>Borsa <button type="button" data-close>I · CHIUDI</button></h2>
+  <div id="inv-stats"></div>
+  <h3 class="sec">Equipaggiato</h3><div id="inv-equip" class="gears"></div>
+  <h3 class="sec">Armi e scudi</h3><div id="inv-gear" class="gears"></div>
+  <h3 class="sec">Risorse</h3><div id="inv-res" class="kv"></div>
+  <h3 class="sec">Oggetti</h3><div id="inv-list"></div></section>
+<section class="panel wide" id="panel-skills" hidden><h2>Abilità <button type="button" data-close>K · CHIUDI</button></h2><p class="sp">Punti disponibili: <b id="sp-count">0</b> · ne guadagni uno a ogni livello.</p><div id="skills-list"></div></section>
 <section class="panel" id="panel-map" hidden><h2>Valle di Valdombra <button type="button" data-close>M · CHIUDI</button></h2><canvas id="bigmap" width="560" height="560"></canvas></section>
 
 <section id="pause" hidden>
@@ -270,6 +349,8 @@ kbd { font: 600 0.72em var(--f-ui); letter-spacing: .04em; border: 1px solid var
 <script src="js/world.js"></script>
 <script src="js/models.js"></script>
 <script src="js/data.js"></script>
+<script src="js/loot.js"></script>
+<script src="js/build.js"></script>
 <script src="js/ai.js"></script>
 <script src="js/game.js"></script>
 <script>

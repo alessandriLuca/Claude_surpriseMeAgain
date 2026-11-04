@@ -1,0 +1,17 @@
+{
+  "name": "valdombra",
+  "private": true,
+  "version": "2.0.0",
+  "description": "Valdombra: third-person fantasy action-RPG in the browser, with AI-voiced NPCs.",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler pages dev public",
+    "deploy": "wrangler pages deploy public --project-name valdombra"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.4.0"
+  },
+  "devDependencies": {
+    "wrangler": "^4.157.0"
+  }
+}
